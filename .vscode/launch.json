@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         
         {
             "type": "node",
@@ -13,6 +14,20 @@
                 "<node_internals>/**"
             ],
             "program": "${file}"
-        }
+        },{
+      "type": "node",
+      "name": "React: Start",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/client",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run-script",
+        "start"
+      ],
+      "env": {
+        "PORT": "3000"
+      },
+      "console": "integratedTerminal"
+    }
     ]
 }
