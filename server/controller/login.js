@@ -6,7 +6,7 @@ require("dotenv").config({ path: '../.env' });
 
 
 //Login Function
-exports.login = async (req, res) => {
+exports.login =  async (req, res) => {
     const { email, password } = req.body;
     try {
         const user = await pool.query(`SELECT * FROM users WHERE email= $1;`, [email]) //Verifying if the user exists in the database
