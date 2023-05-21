@@ -9,9 +9,18 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(100) NOT NULL
 );
 
-INSERT INTO users ( first_name, last_name, email, password)
-VALUES ('sss', 'dasd', 'sdfsfeee',123232);
+INSERT INTO users ( first_name, last_name, email, password, role)
+VALUES ('abdo', 'saadi', 'abdo@yaho.com',abdo123,'admin');
+
+ALTER TABLE users  
+ADD COLUMN role varchar(100);
+
+ALTER TABLE users   
+ALTER COLUMN role  
+SET DEFAULT 'user';
 
 
-
+UPDATE users
+SET role = 'admin'
+WHERE email = 'aje@yahoo.com' ;
 
