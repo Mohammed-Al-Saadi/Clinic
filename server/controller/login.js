@@ -1,6 +1,6 @@
 const bcrypt = require("bcrypt");
 const pool = require("../config/database");
-const { RefreashToken, AccessToken } = require("../utils/jwtTokens");
+const { RefreshToken, AccessToken } = require("../utils/jwtTokens");
 require("dotenv").config({ path: "../.env" });
 
 //Login Function
@@ -24,7 +24,7 @@ exports.login = async (req, res) => {
         } else if (result === true) {
           //Checking if credentials match
           const Access_Token = AccessToken(user.rows[0].user_id);
-          const Refresh_Token = RefreashToken(user.rows[0].user_id);
+          const Refresh_Token = RefreshToken(user.rows[0].user_id);
           const firstName = user.rows[0].first_name;
           const lastName = user.rows[0].last_name;
           const fullName = firstName.concat(" ", lastName);
