@@ -1,40 +1,27 @@
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 
-module.exports= {
+module.exports = {
+  AccessToken: (user_id) => {
+    const payload = {
+      user: { id: user_id },
+    };
+    return jwt.sign(
+      payload,
 
-    AccessToken : (user_id) => {
-        const payload = {
-            user: { id: user_id}
-        }
-        return jwt.sign(
-            payload,
-    
-            process.env.SECRET_KEY
-            ,
-            {
-                expiresIn: '1d',
-            }
-    
-    
-        );
-    
-    },
-    RefreashToken : (user_id) => {
-        const payload = {
-            user: { id: user_id }
-        }
-        return jwt.sign(
-            payload,
-    
-            process.env.SECRET_KEY
-            ,
-            {
-                expiresIn: '1d',
-            }
-    
-    
-        );
-    
-    }
+      process.env.SECRET_KEY,
+      {
+        expiresIn: "15m",
+      }
+    );
+  },
+  RefreshToken: (user_id) => {
+    const payload = {
+      user: { id: user_id },
+    };
+    return jwt.sign(
+      payload,
 
-}
+      process.env.SECRET_KEY
+    );
+  },
+};
