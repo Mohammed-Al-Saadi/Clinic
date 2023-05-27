@@ -6,6 +6,7 @@ const { RefreshToken, AccessToken } = require("../utils/jwtTokens");
 
 require("dotenv").config();
 const validateUserInput = require("../utils/inputValidationMiddleware");
+const { Pool } = require("pg");
 
 const router = express.Router();
 // User registration route
@@ -143,5 +144,31 @@ router.post(
     }
   }
 );
+
+// GET user by ID route
+router.get("/:id", async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const user = await pool.query("SELECT * FROM users WHERE user_id = $1", [
+      user_id,
+    ]);
+    console.log(user);
+
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const cleanUser = {
+      id: user.rows[0].id,
+      username: user.rows[0].username,
+      email: user.rows[0].email,
+      // Add more properties if needed
+    };
+
+    res.json(cleanUser);
+  } catch (error) {
+    console.error("Error retrieving user:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 module.exports = router;
