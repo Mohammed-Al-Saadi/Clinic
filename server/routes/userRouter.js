@@ -6,7 +6,6 @@ const { RefreshToken, AccessToken } = require("../utils/jwtTokens");
 
 require("dotenv").config();
 const validateUserInput = require("../utils/inputValidationMiddleware");
-const { Pool } = require("pg");
 
 const router = express.Router();
 // User registration route
@@ -147,29 +146,34 @@ router.post(
 
 // GET user by ID route
 router.get("/:id", async (req, res) => {
+  const { id } = req.params;
+
+  const query = "SELECT * FROM users WHERE user_id = $1";
+  const values = [id];
+
   try {
-    const { user_id } = req.params;
-    const user = await pool.query("SELECT * FROM users WHERE user_id = $1", [
-      user_id,
-    ]);
-    console.log(user);
+    const result = await pool.query(query, values);
 
-    if (user.rows.length === 0) {
-      return res.status(404).json({ message: "User not found" });
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "User not found" });
+    } else {
+      res.json(result.rows[0]);
     }
-    const cleanUser = {
-      id: user.rows[0].user_id,
-      first_name: user.rows[0].first_name,
-      last_name: user.rows[0].last_name,
-      email: user.rows[0].email,
-      // Add more properties if needed
-    };
-
-    res.json(cleanUser);
   } catch (error) {
     console.error("Error retrieving user:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: "Internal Server Error" });
   }
+});
+
+router.get("/", (req, res) => {
+  pool.query("SELECT * FROM users", (err, result) => {
+    if (err) {
+      console.error("Error executing query", err);
+      res.status(500).json({ error: "Internal Server Error" });
+    } else {
+      res.status(200).json(result.rows);
+    }
+  });
 });
 
 module.exports = router;
