@@ -158,8 +158,9 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     const cleanUser = {
-      id: user.rows[0].id,
-      username: user.rows[0].username,
+      id: user.rows[0].user_id,
+      first_name: user.rows[0].first_name,
+      last_name: user.rows[0].last_name,
       email: user.rows[0].email,
       // Add more properties if needed
     };
