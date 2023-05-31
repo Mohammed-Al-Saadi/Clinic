@@ -94,7 +94,7 @@ router.post("/reset/:email/:token", async (req, res) => {
             password: hash,
           };
 
-          //Update password columns data
+          //Update password data
 
           pool.query(
             "UPDATE users SET password = $1 WHERE email = $2",
