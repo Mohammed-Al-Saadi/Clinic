@@ -110,7 +110,7 @@ router.post(
             });
           } else if (result === true) {
             //Checking if credentials match
-            const Access_Token = AccessToken(user.rows[0].user_id);
+            const Access_Token = AccessToken(user.rows[0].user_id,"30m");
             const Refresh_Token = RefreshToken(user.rows[0].user_id);
             const firstName = user.rows[0].first_name;
             const lastName = user.rows[0].last_name;
