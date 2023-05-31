@@ -5,13 +5,13 @@ const pool = require("../config/database");
 const { AccessToken } = require("../utils/jwtTokens");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-var nodemailer = require("nodemailer");
+const mailer = require("../utils/mailer");
 
 router.get("/", async (req, res) => {
   res.json({ mes: "Forgot your password" });
 });
 
-//sending a link to the user to reset password
+//sending a verification code to the user to reset password
 router.post("/", async (req, res) => {
   const { email } = req.body;
   const user = await pool.query(`SELECT * FROM users WHERE email= $1 ;`, [
@@ -25,43 +25,48 @@ router.post("/", async (req, res) => {
     });
   }
   //generate new token to reset password and send it with the link. link will be valid to use only one time.
-  const token = AccessToken(user.rows[0].user_id, "9m");
+  const token = AccessToken(user.rows[0].user_id, "1m");
 
-  //generate a reset link
-  const link = `http://localhost:3001/reset/${email}/${token}`;
   //generate random numbers
-  const random = Math.floor(Math.random() * 9000 + 1000);
-  console.log(random);
-
+  const generateRandomString = Math.floor(Math.random() * Date.now()).toString(
+    36
+  );
+  console.log(generateRandomString);
   //send the link throught the  email to user, for changing password using nodemailer
-
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL,
-      pass: process.env.EMAILPSW,
-    },
-  });
-
-  const mailOptions = {
-    from: process.env.EMAIL,
-    to: email,
-    subject: "Please click the link below, to reset your password!!",
-    text: link,
-  };
-
-  transporter.sendMail(mailOptions, function (error, info) {
-    if (error) {
-      console.log(error);
-    } else {
-      console.log("Email sent: " + info.response);
-    }
-  });
-
+  const subject = "Please copy the verification code, to rest your password";
+  mailer(email, generateRandomString, subject);
   res.json({
-    msg: "Please check your email, to reset your password!!",
-    Link: link,
+    msg: "Please check your email, to reset your password!! Note render to input code route",
+    Token: token,
   });
+});
+
+// send random Char  'kxai4on2' to user email, to verify reset password
+router.post("/reset/:email/:token/:generateRandomString", async (req, res) => {
+  const { token, generateRandomString, email } = req.params;
+  const { code } = req.body;
+
+  try {
+    const verifyToken = jwt.verify(token, process.env.SECRET_KEY);
+    if (verifyToken) {
+      if (code != generateRandomString || !code) {
+        return res.json("Please check your verification code!");
+      }
+      //send the link here to reset password
+      else {
+        const link = `http://localhost:3001/reset/${email}/${token}/${generateRandomString}`;
+        const subject1 = "Reset password link has been sent to your email!";
+        mailer(email, link, subject1);
+
+        res.json({
+          msg: "Please check your email, to reset your password!! Note render to input code route",
+          Link: link,
+        });
+      }
+    }
+  } catch (error) {
+    res.json(error);
+  }
 });
 
 //check if token is valid route
