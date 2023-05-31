@@ -25,7 +25,7 @@ router.post("/", async (req, res) => {
     });
   }
   //generate new token to reset password and send it with the link. link will be valid to use only one time.
-  const token = AccessToken(user.rows[0].user_id, "1m");
+  const token = AccessToken(user.rows[0].user_id, "15m");
 
   //generate random Char  'kxai4on2'
   const generateRandomString = Math.floor(Math.random() * Date.now()).toString(
