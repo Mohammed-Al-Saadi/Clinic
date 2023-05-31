@@ -29,6 +29,9 @@ router.post("/", async (req, res) => {
 
   //generate a reset link
   const link = `http://localhost:3001/reset/${email}/${token}`;
+  //generate random numbers
+  const random = Math.floor(Math.random() * 9000 + 1000);
+  console.log(random);
 
   //send the link throught the  email to user, for changing password using nodemailer
 
