@@ -27,12 +27,12 @@ router.post("/", async (req, res) => {
   //generate new token to reset password and send it with the link. link will be valid to use only one time.
   const token = AccessToken(user.rows[0].user_id, "1m");
 
-  //generate random numbers
+  //generate random Char  'kxai4on2'
   const generateRandomString = Math.floor(Math.random() * Date.now()).toString(
     36
   );
   console.log(generateRandomString);
-  //send the link throught the  email to user, for changing password using nodemailer
+  //send the verification code throught the  email to user, for changing password using nodemailer
   const subject = "Please copy the verification code, to rest your password";
   mailer(email, generateRandomString, subject);
   res.json({
@@ -41,7 +41,7 @@ router.post("/", async (req, res) => {
   });
 });
 
-// send random Char  'kxai4on2' to user email, to verify reset password
+// check if input for the random chars are matched, if match send link to reset password
 router.post("/reset/:email/:token/:generateRandomString", async (req, res) => {
   const { token, generateRandomString, email } = req.params;
   const { code } = req.body;
@@ -56,6 +56,8 @@ router.post("/reset/:email/:token/:generateRandomString", async (req, res) => {
       else {
         const link = `http://localhost:3001/reset/${email}/${token}/${generateRandomString}`;
         const subject1 = "Reset password link has been sent to your email!";
+
+        //send the link  throught the  email to user, for changing password using nodemailer
         mailer(email, link, subject1);
 
         res.json({
@@ -82,7 +84,7 @@ router.get("/reset/:email/:token", async (req, res) => {
   }
 });
 
-//update password after checking the token expdate route
+//update password after checking the token expdate and verification code route
 router.post("/reset/:email/:token", async (req, res) => {
   const { password, password1 } = req.body;
   const { token, email } = req.params;
