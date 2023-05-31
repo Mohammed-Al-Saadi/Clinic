@@ -54,7 +54,7 @@ router.post("/reset/:email/:token/:generateRandomString", async (req, res) => {
       }
       //send the link here to reset password
       else {
-        const link = `http://localhost:3001/reset/${email}/${token}/${generateRandomString}`;
+        const link = `http://localhost:3001/reset/${email}/${token}`;
         const subject1 = "Reset password link has been sent to your email!";
 
         //send the link  throught the  email to user, for changing password using nodemailer
