@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 
 module.exports = {
-  AccessToken: (user_id) => {
+  AccessToken: (user_id, expDate) => {
     const payload = {
       user: { id: user_id },
     };
@@ -10,7 +10,7 @@ module.exports = {
 
       process.env.SECRET_KEY,
       {
-        expiresIn: "15m",
+        expiresIn: expDate,
       }
     );
   },
