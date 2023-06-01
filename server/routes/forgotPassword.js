@@ -61,7 +61,7 @@ router.post("/reset/:email/:token/:generateRandomString", async (req, res) => {
         mailer(email, link, subject1);
 
         res.json({
-          msg: "Please check your email, to reset your password!! Note render to input code route",
+          msg: "Please check your email, to reset your password!! Note render to reset password route",
           Link: link,
         });
       }
