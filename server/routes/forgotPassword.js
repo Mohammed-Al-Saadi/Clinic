@@ -109,12 +109,8 @@ router.post("/reset/:email/:token", async (req, res) => {
           pool.query(
             "UPDATE users SET password = $1 WHERE email = $2",
             [user.password, email],)
-            try {
-              res.json("Password has been changed!")
-            } catch (error) {
-              res.json("Server error")
-              
-            }
+            res.json("Password has been changed!")
+          
         });
       }
     }
