@@ -1,5 +1,5 @@
 require("dotenv").config({ path: "./.env" });
-var nodemailer = require("nodemailer");
+const nodemailer = require("nodemailer");
 
 
 const mailer = (email, text, subject) => {
