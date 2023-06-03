@@ -105,7 +105,7 @@ router.post(
     try {
       const verifyToken = jwt.verify(token, process.env.SECRET_KEY);
       if (verifyToken) {
-        if (password != password1 || !password || !password1) {
+        if (password != password1 ) {
           return res.json("Password should be match!!");
         } else {
           bcrypt.hash(password, 10, (err, hash) => {
