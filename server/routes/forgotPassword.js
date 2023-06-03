@@ -6,6 +6,8 @@ const { AccessToken } = require("../utils/jwtTokens");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const mailer = require("../utils/mailer");
+const validateInput = require("../utils/inputValidationMiddleware");
+const { check } = require("express-validator");
 
 router.get("/", async (req, res) => {
   res.json({ mes: "Forgot your password" });
@@ -55,7 +57,8 @@ router.post("/reset/:email/:token/:generateRandomString", async (req, res) => {
       //send the link here to reset password
       else {
         const link = `http://localhost:3001/reset/${email}/${token}`;
-        const subject1 = "Please click the link below to update your password !";
+        const subject1 =
+          "Please click the link below to update your password !";
 
         //send the link  throught the  email to user, for changing password using nodemailer
         mailer(email, link, subject1);
@@ -85,37 +88,48 @@ router.get("/reset/:email/:token", async (req, res) => {
 });
 
 //update password after checking the token expdate and verification code route
-router.post("/reset/:email/:token", async (req, res) => {
-  const { password, password1 } = req.body;
-  const { token, email } = req.params;
+router.post(
+  "/reset/:email/:token",
+  [
+    check("password")
+      .notEmpty()
+      .withMessage("Password is required")
+      .isLength({ min: 6 })
+      .withMessage("Password must be at least 6 characters long"),
+  ],
+  validateInput,
+  async (req, res) => {
+    const { password, password1 } = req.body;
+    const { token, email } = req.params;
 
-  try {
-    const verifyToken = jwt.verify(token, process.env.SECRET_KEY);
-    if (verifyToken) {
-      if (password != password1 || !password || !password1) {
-        return res.json("Password should be match!!");
-      } else {
-        bcrypt.hash(password, 10, (err, hash) => {
-          if (err)
-            res.status(err).json({
-              error: "Please check your password!!",
-            });
-          const user = {
-            password: hash,
-          };
+    try {
+      const verifyToken = jwt.verify(token, process.env.SECRET_KEY);
+      if (verifyToken) {
+        if (password != password1 || !password || !password1) {
+          return res.json("Password should be match!!");
+        } else {
+          bcrypt.hash(password, 10, (err, hash) => {
+            if (err)
+              res.status(err).json({
+                error: "Please check your password!!",
+              });
+            const user = {
+              password: hash,
+            };
 
-          //Update password data
+            //Update password data
 
-          pool.query(
-            "UPDATE users SET password = $1 WHERE email = $2",
-            [user.password, email],)
-            res.json("Password has been changed!")
-          
-        });
+            pool.query("UPDATE users SET password = $1 WHERE email = $2", [
+              user.password,
+              email,
+            ]);
+            res.json("Password has been changed!");
+          });
+        }
       }
+    } catch (error) {
+      res.json(error);
     }
-  } catch (error) {
-    res.json(error);
   }
-});
+);
 module.exports = router;
