@@ -35,7 +35,7 @@ router.post("/", async (req, res) => {
   );
   console.log(generateRandomString);
   //send the verification code throught the  email to user, for changing password using nodemailer
-  const subject = "Please use the verification code, to rest your password";
+  const subject = "Please use the verification code, to reset your password";
   mailer(email, generateRandomString, subject);
   res.json({
     msg: "Please check your email, to reset your password!! Note render to input code route",
