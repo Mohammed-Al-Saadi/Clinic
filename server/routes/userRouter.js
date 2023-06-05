@@ -6,14 +6,18 @@ const { RefreshToken, AccessToken } = require("../utils/jwtTokens");
 
 require("dotenv").config();
 const validateUserInput = require("../utils/inputValidationMiddleware");
+const assignAdminRole = require("../middlewares/AssignAdminRole");
+const checkUserRole = require("../middlewares/checkUserRole");
+const checkAdminRole = require("../middlewares/checkAdminRole");
 
 const router = express.Router();
+
 // User registration route
 router.post(
   "/register",
   [
-    check("first_name").notEmpty().withMessage("Username is required"),
-    check("last_name").notEmpty().withMessage("lastName is required"),
+    check("first_name").notEmpty().withMessage("First name is required"),
+    check("last_name").notEmpty().withMessage("Last name is required"),
     check("email")
       .notEmpty()
       .withMessage("Email is required")
@@ -27,53 +31,40 @@ router.post(
   ],
   validateUserInput,
   async (req, res) => {
-    // Handle user registration logic here
     const { first_name, last_name, email, password } = req.body;
 
     try {
-      const user = await pool.query(`SELECT * FROM users WHERE email= $1;`, [
-        email,
-      ]); //Checking if user already exists
-      if (user.rows.length != 0) {
-        return res.status(400).json({
-          error: "Username already taken.",
-        });
-      } else {
-        bcrypt.hash(password, 10, (err, hash) => {
-          if (err)
-            res.status(err).json({
-              error: "Please check your password!!",
-            });
-          const user = {
-            first_name,
-            last_name,
-            email,
-            password: hash,
-          };
+      const existingUser = await pool.query(
+        "SELECT * FROM users WHERE email = $1",
+        [email]
+      );
 
-          //Inserting data into the database
-
-          pool.query(
-            `INSERT INTO users (first_name, last_name, email, password) VALUES ($1,$2,$3,$4);`,
-            [user.first_name, user.last_name, user.email, user.password],
-            (err) => {
-              try {
-                res
-                  .status(200)
-                  .send({ message: "User registered successfully" });
-              } catch (error) {
-                console.error(error.message);
-                res.status(500).send(" server error");
-              }
-            }
-          );
-        });
+      if (existingUser.rows.length !== 0) {
+        return res.status(400).json({ error: "Email already exists" });
       }
-    } catch (err) {
-      console.log(err);
-      res.status(500).json({
-        error: "Please check your connection!", //Database connection error
-      });
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      await pool.query(
+        "INSERT INTO users (first_name, last_name, email, password) VALUES ($1, $2, $3, $4)",
+        [first_name, last_name, email, hashedPassword]
+      );
+
+      // Assign the default role 'user' to the registered user
+      const user = await pool.query("SELECT * FROM users WHERE email = $1", [
+        email,
+      ]);
+      const userId = user.rows[0].user_id;
+
+      await pool.query(
+        "INSERT INTO user_roles (user_id, role_name) VALUES ($1, 'user')",
+        [userId]
+      );
+
+      res.status(200).json({ message: "User registered successfully" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 );
@@ -91,89 +82,128 @@ router.post(
   ],
   validateUserInput,
   async (req, res) => {
-    // Handle user login logic here
     const { email, password } = req.body;
+
     try {
-      const user = await pool.query(`SELECT * FROM users WHERE email= $1;`, [
+      const user = await pool.query("SELECT * FROM users WHERE email = $1", [
         email,
-      ]); //Verifying if the user exists in the database
+      ]);
+
       if (user.rows.length === 0) {
-        res.status(400).json({
-          error: "Invalid username or password",
-        });
-      } else {
-        bcrypt.compare(password, user.rows[0].password, (err, result) => {
-          //Comparing the hashed password
-          if (err) {
-            res.status(500).json({
-              error: "Server error",
-            });
-          } else if (result === true) {
-            //Checking if credentials match
-            const Access_Token = AccessToken(user.rows[0].user_id);
-            const Refresh_Token = RefreshToken(user.rows[0].user_id);
-            const firstName = user.rows[0].first_name;
-            const lastName = user.rows[0].last_name;
-            const fullName = firstName.concat(" ", lastName);
-            try {
-              res.json({
-                fullName,
-                Access_Token,
-                Refresh_Token,
-                message: "Login successful",
-              });
-            } catch (error) {
-              console.error(error.message);
-              res.status(500).send("Server error");
-            }
-          } else {
-            //Declaring the errors
-            if (result != true)
-              res.status(400).json({
-                error: "Password or email is incorrect!",
-              });
-          }
-        });
+        return res.status(400).json({ error: "Invalid email or password" });
       }
-    } catch (err) {
-      console.log(err);
-      res.status(500).json({
-        error: "Server error!", //Database connection
+
+      const isPasswordValid = await bcrypt.compare(
+        password,
+        user.rows[0].password
+      );
+
+      if (!isPasswordValid) {
+        return res.status(400).json({ error: "Invalid email or password" });
+      }
+
+      const userId = user.rows[0].user_id;
+      const accessToken = AccessToken(userId);
+      const refreshToken = RefreshToken(userId);
+
+      const fullName = `${user.rows[0].first_name} ${user.rows[0].last_name}`;
+
+      res.json({
+        fullName,
+        accessToken,
+        refreshToken,
+        message: "Login successful",
       });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 );
 
-// GET user by ID route
+// Get user by ID route
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
 
-  const query = "SELECT * FROM users WHERE user_id = $1";
-  const values = [id];
-
   try {
-    const result = await pool.query(query, values);
+    const result = await pool.query("SELECT * FROM users WHERE user_id = $1", [
+      id,
+    ]);
 
     if (result.rows.length === 0) {
-      res.status(404).json({ error: "User not found" });
-    } else {
-      res.json(result.rows[0]);
+      return res.status(404).json({ error: "User not found" });
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
     console.error("Error retrieving user:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-router.get("/", (req, res) => {
-  pool.query("SELECT * FROM users", (err, result) => {
-    if (err) {
-      console.error("Error executing query", err);
-      res.status(500).json({ error: "Internal Server Error" });
-    } else {
-      res.status(200).json(result.rows);
+// Get all users route
+router.get("/", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM users");
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error executing query:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Get user by ID route for admins only
+router.get(
+  "/admin/:userId",
+  checkUserRole,
+  checkAdminRole,
+  async (req, res) => {
+    try {
+      const { userId } = req.params;
+
+      // Retrieve the user with the specified userId
+      const user = await pool.query("SELECT * FROM users WHERE user_id = $1", [
+        userId,
+      ]);
+
+      if (!user.rows.length) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Return the user data
+      res.json(user.rows[0]);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
     }
-  });
+  }
+);
+
+// Assign admin role to a user
+router.put("/assign-admin/:userId", assignAdminRole, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    // Retrieve the updated user data from the request body
+    const { firstName, lastName, email } = req.body;
+
+    // Perform the update operation
+    const result = await pool.query(
+      "UPDATE users SET first_name = $1, last_name = $2, email = $3 WHERE user_id = $4",
+      [firstName, lastName, email, userId]
+    );
+
+    // Check if the update was successful
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Return a success message
+    res.json({ message: "User updated successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 module.exports = router;
