@@ -6,9 +6,11 @@ const { RefreshToken, AccessToken } = require("../utils/jwtTokens");
 
 require("dotenv").config();
 const validateUserInput = require("../utils/inputValidationMiddleware");
-const assignAdminRole = require("../middlewares/AssignAdminRole");
-const checkUserRole = require("../middlewares/checkUserRole");
-const checkAdminRole = require("../middlewares/checkAdminRole");
+const {
+  assignAdminRole,
+  checkUserRole,
+  checkAdminRole,
+} = require("../middlewares/roles");
 
 const router = express.Router();
 
