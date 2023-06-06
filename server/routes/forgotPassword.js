@@ -9,9 +9,6 @@ const mailer = require("../utils/mailer");
 const validateInput = require("../utils/inputValidationMiddleware");
 const { check } = require("express-validator");
 
-router.get("/", async (req, res) => {
-  res.json({ mes: "Forgot your password" });
-});
 
 //sending a verification code to the user to reset password
 router.post("/", async (req, res) => {
@@ -33,7 +30,6 @@ router.post("/", async (req, res) => {
   const generateRandomString = Math.floor(Math.random() * Date.now()).toString(
     36
   );
-  console.log(generateRandomString);
   //send the verification code throught the  email to user, for changing password using nodemailer
   const subject = "Please use the verification code, to reset your password";
   mailer(email, generateRandomString, subject);
