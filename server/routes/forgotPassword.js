@@ -1,45 +1,47 @@
 const express = require("express");
-require("dotenv").config({ path: "./.env" });
 const router = express.Router();
-const pool = require("../config/database");
-const { AccessToken } = require("../utils/jwtTokens");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
-const mailer = require("../utils/mailer");
-const validateInput = require("../utils/inputValidationMiddleware");
 const { check } = require("express-validator");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const pool = require("../config/database");
+const mailer = require("../utils/mailer");
+const { AccessToken } = require("../utils/jwtTokens");
+const validateInput = require("../utils/inputValidationMiddleware");
+require("dotenv").config({ path: "./.env" });
 
-
-//sending a verification code to the user to reset password
+// Sending a verification code to the user to reset the password
 router.post("/", async (req, res) => {
   const { email } = req.body;
-  const user = await pool.query(`SELECT * FROM users WHERE email= $1 ;`, [
+  const user = await pool.query("SELECT * FROM users WHERE email = $1;", [
     email,
   ]);
 
-  //Checking if user not exists
-  if (!user.rows.length != 0) {
+  // Checking if user does not exist
+  if (!user.rows.length) {
     return res.status(200).json({
       msg: "The given email is not registered",
     });
   }
-  //generate new token to reset password and send it with the link. link will be valid to use only one time.
+
+  // Generate a new token to reset the password and send it with the link (valid for one time use)
   const token = AccessToken(user.rows[0].user_id, "15m");
 
-  //generate random Char  'kxai4on2'
+  // Generate a random string 'kxai4on2'
   const generateRandomString = Math.floor(Math.random() * Date.now()).toString(
     36
   );
-  //send the verification code throught the  email to user, for changing password using nodemailer
-  const subject = "Please use the verification code, to reset your password";
+
+  // Send the verification code through email to the user for changing the password using nodemailer
+  const subject = "Please use the verification code to reset your password";
   mailer(email, generateRandomString, subject);
+
   res.json({
-    msg: "Please check your email, to reset your password!! Note render to input code route",
-    Token: token,
+    msg: "Please check your email to reset your password! Note the code for the input code route",
+    token: token,
   });
 });
 
-// check if input for the random chars are matched, if match send link to reset password
+// Check if the input for the random chars is matched, if matched, send the link to reset the password
 router.post("/reset/:email/:token/:generateRandomString", async (req, res) => {
   const { token, generateRandomString, email } = req.params;
   const { code } = req.body;
@@ -47,21 +49,17 @@ router.post("/reset/:email/:token/:generateRandomString", async (req, res) => {
   try {
     const verifyToken = jwt.verify(token, process.env.SECRET_KEY);
     if (verifyToken) {
-      if (code != generateRandomString || !code) {
+      if (code !== generateRandomString || !code) {
         return res.json("Please check your verification code!");
-      }
-      //send the link here to reset password
-      else {
+      } else {
         const link = `http://localhost:3001/reset/${email}/${token}`;
-        const subject1 =
-          "Please click the link below to update your password !";
-
-        //send the link  throught the  email to user, for changing password using nodemailer
-        mailer(email, link, subject1);
+        const subject = "Please click the link below to update your password!";
+        // Send the link through email to the user for changing the password using nodemailer
+        mailer(email, link, subject);
 
         res.json({
-          msg: "Please check your email, to reset your password!! Note render to reset password route",
-          Link: link,
+          msg: "Please check your email to reset your password! Note the route for resetting the password",
+          link: link,
         });
       }
     }
@@ -70,7 +68,7 @@ router.post("/reset/:email/:token/:generateRandomString", async (req, res) => {
   }
 });
 
-//check if token is valid route
+// Check if the token is valid
 router.get("/reset/:email/:token", async (req, res) => {
   const { token } = req.params;
   try {
@@ -83,7 +81,7 @@ router.get("/reset/:email/:token", async (req, res) => {
   }
 });
 
-//update password after checking the token expdate and verification code route
+// Update password after checking the token expiration date and verification code
 router.post(
   "/reset/:email/:token",
   [
@@ -101,24 +99,26 @@ router.post(
     try {
       const verifyToken = jwt.verify(token, process.env.SECRET_KEY);
       if (verifyToken) {
-        if (password != password1 ) {
-          return res.json("Password should be match!!");
+        if (password !== password1) {
+          return res.json("Passwords do not match!");
         } else {
           bcrypt.hash(password, 10, (err, hash) => {
-            if (err)
-              res.status(err).json({
-                error: "Please check your password!!",
+            if (err) {
+              return res.status(err).json({
+                error: "Please check your password!",
               });
+            }
+
             const user = {
               password: hash,
             };
 
-            //Update password data
-
+            // Update the password
             pool.query("UPDATE users SET password = $1 WHERE email = $2", [
               user.password,
               email,
             ]);
+
             res.json("Password has been changed!");
           });
         }
@@ -128,4 +128,5 @@ router.post(
     }
   }
 );
+
 module.exports = router;
