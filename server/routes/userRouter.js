@@ -89,7 +89,8 @@ router.post(
   validateUserInput,
   async (req, res) => {
     const { email, password } = req.body;
-
+    //ur.role_name specifies the columns you want to retrieve
+    //u.* selects all columns from the users table, and ur.role_name selects the role_name column from the user_roles table.
     try {
       const userQuery = await pool.query(
         "SELECT u.*, ur.role_name FROM users u JOIN user_roles ur ON u.user_id = ur.user_id WHERE u.email = $1",
