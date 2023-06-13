@@ -45,3 +45,15 @@ VALUES
 
 ALTER TABLE user_roles
 ADD COLUMN role_name VARCHAR(255) NOT NULL;
+
+
+{
+    "first_name":"admin",
+    "last_name":"user",
+    "email":"admin@clinic.com",
+    "password":"adminadmin"
+}
+UPDATE user_roles
+SET role_id = (SELECT role_id FROM roles WHERE role_name = 'admin'),
+    role_name = 'admin'
+WHERE user_id = 'user-id';
