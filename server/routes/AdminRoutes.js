@@ -5,7 +5,7 @@ const { checkUserRole, updateToAdmin } = require("../middlewares/roles");
 
 // Get all users (accessible only to admins)
 adminRouter.get(
-  "/users/:id",
+  "/admin/:id",
   authenticateUser,
   checkUserRole("admin"),
   async (req, res) => {

@@ -36,31 +36,6 @@ const updateToAdmin = async (req, res, next) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
-const checkAdminRole = (role) => {
-  return async (req, res, next) => {
-    const { id } = req.params;
-
-    try {
-      // Check if the user has the desired role in the user_roles table
-      const userRoleQuery = await pool.query(
-        "SELECT * FROM user_roles WHERE user_id = $1 AND role_id = (SELECT role_id FROM roles WHERE role_name = $2)",
-        [id, role]
-      );
-
-      if (userRoleQuery.rows.length === 0) {
-        // User doesn't have the desired role, so continue to the next middleware
-        return next();
-      }
-
-      // User has the desired role, so return an error
-      return res.status(403).json({ error: "Unauthorized" });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  };
-};
 const checkUserRole = (role) => {
   return async (req, res, next) => {
     console.log("checkUserRole middleware");
@@ -86,6 +61,5 @@ const checkUserRole = (role) => {
 
 module.exports = {
   updateToAdmin,
-  checkAdminRole,
   checkUserRole,
 };
