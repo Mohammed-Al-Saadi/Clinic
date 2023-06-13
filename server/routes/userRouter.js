@@ -34,6 +34,26 @@ router.post(
         [first_name, last_name, email, hashedPassword]
       );
 
+      // Assign the default role 'user' to the registered user
+      const user = await pool.query("SELECT * FROM users WHERE email = $1", [
+        email,
+      ]);
+      const userId = user.rows[0].user_id;
+
+      // Retrieve the role_id and role_name for the 'user' role
+      const roleQuery = await pool.query(
+        "SELECT * FROM roles WHERE role_name = $1",
+        ["user"]
+      );
+      const roleId = roleQuery.rows[0].role_id;
+      const roleName = roleQuery.rows[0].role_name;
+
+      // Insert the user role into the user_roles table
+      await pool.query(
+        "INSERT INTO user_roles (user_id, role_id, role_name) VALUES ($1, $2, $3)",
+        [userId, roleId, roleName]
+      );
+
       res.status(200).json({ message: "User registered successfully" });
     } catch (error) {
       console.error(error);
