@@ -1,9 +1,9 @@
 const jwt = require("jsonwebtoken");
 
 module.exports = {
-  AccessToken: (user_id) => {
+  AccessToken: (user_id, role) => {
     const payload = {
-      user: { id: user_id },
+      user: { id: user_id, role }, // Include the role in the payload
     };
     return jwt.sign(payload, process.env.SECRET_KEY, {
       expiresIn: "15m",

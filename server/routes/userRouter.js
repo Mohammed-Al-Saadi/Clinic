@@ -6,11 +6,6 @@ const { RefreshToken, AccessToken } = require("../utils/jwtTokens");
 
 require("dotenv").config();
 const validateUserInput = require("../utils/inputValidationMiddleware");
-const {
-  assignAdminRole,
-  checkUserRole,
-  checkAdminRole,
-} = require("../middlewares/roles");
 
 const router = express.Router();
 
@@ -58,9 +53,18 @@ router.post(
       ]);
       const userId = user.rows[0].user_id;
 
+      // Retrieve the role_id and role_name for the 'user' role
+      const roleQuery = await pool.query(
+        "SELECT * FROM roles WHERE role_name = $1",
+        ["user"]
+      );
+      const roleId = roleQuery.rows[0].role_id;
+      const roleName = roleQuery.rows[0].role_name;
+
+      // Insert the user role into the user_roles table
       await pool.query(
-        "INSERT INTO user_roles (user_id, role_name) VALUES ($1, 'user')",
-        [userId]
+        "INSERT INTO user_roles (user_id, role_id, role_name) VALUES ($1, $2, $3)",
+        [userId, roleId, roleName]
       );
 
       res.status(200).json({ message: "User registered successfully" });
@@ -87,33 +91,36 @@ router.post(
     const { email, password } = req.body;
 
     try {
-      const user = await pool.query("SELECT * FROM users WHERE email = $1", [
-        email,
-      ]);
+      const userQuery = await pool.query(
+        "SELECT u.*, ur.role_name FROM users u JOIN user_roles ur ON u.user_id = ur.user_id WHERE u.email = $1",
+        [email]
+      );
 
-      if (user.rows.length === 0) {
+      if (userQuery.rows.length === 0) {
         return res.status(400).json({ error: "Invalid email or password" });
       }
 
-      const isPasswordValid = await bcrypt.compare(
-        password,
-        user.rows[0].password
-      );
+      const user = userQuery.rows[0];
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
 
       if (!isPasswordValid) {
         return res.status(400).json({ error: "Invalid email or password" });
       }
 
-      const userId = user.rows[0].user_id;
-      const accessToken = AccessToken(userId);
+      const userId = user.user_id;
+      const role = user.role_name; // Retrieve the user's role from the query result
+
+      const accessToken = AccessToken(userId, role);
       const refreshToken = RefreshToken(userId);
 
-      const fullName = `${user.rows[0].first_name} ${user.rows[0].last_name}`;
+      const fullName = `${user.first_name} ${user.last_name}`;
 
       res.json({
         fullName,
         accessToken,
         refreshToken,
+        role, // Include the role in the response
         message: "Login successful",
       });
     } catch (error) {
@@ -140,71 +147,6 @@ router.get("/:id", async (req, res) => {
   } catch (error) {
     console.error("Error retrieving user:", error);
     res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-// Get all users route
-router.get("/", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM users");
-
-    res.status(200).json(result.rows);
-  } catch (error) {
-    console.error("Error executing query:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-// Get user by ID route for admins only
-router.get(
-  "/admin/:userId",
-  checkUserRole,
-  checkAdminRole,
-  async (req, res) => {
-    try {
-      const { userId } = req.params;
-
-      // Retrieve the user with the specified userId
-      const user = await pool.query("SELECT * FROM users WHERE user_id = $1", [
-        userId,
-      ]);
-
-      if (!user.rows.length) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      // Return the user data
-      res.json(user.rows[0]);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  }
-);
-
-// Assign admin role to a user
-router.put("/assign-admin/:userId", assignAdminRole, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    // Retrieve the updated user data from the request body
-    const { firstName, lastName, email } = req.body;
-
-    // Perform the update operation
-    const result = await pool.query(
-      "UPDATE users SET first_name = $1, last_name = $2, email = $3 WHERE user_id = $4",
-      [firstName, lastName, email, userId]
-    );
-
-    // Check if the update was successful
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Return a success message
-    res.json({ message: "User updated successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error" });
   }
 });
 
