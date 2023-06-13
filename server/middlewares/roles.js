@@ -1,115 +1,91 @@
 const pool = require("../config/database");
-
-const assignAdminRole = async (req, res, next) => {
-  const userId = req.params.userId;
-  const validateUUID = (uuid) => {
-    const uuidRegex =
-      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[4|8|bB][0-9a-fA-F]{3}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-    return uuidRegex.test(uuid);
-  };
+const updateToAdmin = async (req, res, next) => {
+  const { id } = req.params;
+  console.log("User ID:", id); // Log the ID parameter for debugging
 
   try {
-    // Check if the userId is a valid UUID
-    const isValidUUID = validateUUID(userId);
-    if (!isValidUUID) {
-      return res.status(400).json({ error: "Invalid user ID" });
-    }
-
-    // Check if the user already has an admin role
-    const userRole = await pool.query(
-      "SELECT * FROM user_roles WHERE user_id = $1 AND role_id = (SELECT role_id FROM roles WHERE role_name = 'admin')",
-      [userId]
-    );
-
-    if (userRole.rows.length > 0) {
-      return res.status(400).json({ error: "User already has an admin role" });
-    }
-
-    // Get the role_id for the 'admin' role
-    const adminRole = await pool.query(
-      "SELECT role_id FROM roles WHERE role_name = 'admin'"
-    );
-
-    const roleId = adminRole.rows[0].role_id;
-
-    // Assign the admin role to the user
-    await pool.query(
-      "INSERT INTO user_roles (user_id, role_id, role_name) VALUES ($1, $2, 'admin')",
-      [userId, roleId]
-    );
-
-    next();
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-const checkAdminRole = async (req, res, next) => {
-  try {
-    const { userId } = req.params;
-
-    // Check if the user has the 'admin' role
-    const adminRole = await pool.query(
-      "SELECT role_id FROM roles WHERE role_name = $1",
-      ["admin"]
-    );
-
-    const userAdminRole = await pool.query(
-      "SELECT * FROM user_roles WHERE user_id = $1 AND role_id = $2",
-      [userId, adminRole.rows[0].role_id]
-    );
-
-    if (userAdminRole.rows.length === 0) {
-      return res
-        .status(403)
-        .json({ error: "Access denied. Only admins are allowed." });
-    }
-
-    next();
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-const checkUserRole = async (req, res, next) => {
-  const userId = req.params.userId;
-  const desiredRoleName = "admin"; // Replace with the desired role name (e.g., 'admin', 'user')
-
-  try {
-    // Retrieve the role ID based on the desired role name
-    const roleQuery = await pool.query(
-      "SELECT role_id FROM roles WHERE role_name = $1",
-      [desiredRoleName]
-    );
-
-    // Check if the role exists
-    if (roleQuery.rows.length === 0) {
-      return res.status(500).json({ error: "Desired role not found" });
-    }
-
-    const roleId = roleQuery.rows[0].role_id;
-
-    // Check if the user has the desired role in the user_roles table
+    // Check if the user already has the admin role
     const userRoleQuery = await pool.query(
-      "SELECT * FROM user_roles WHERE user_id = $1 AND role_id = $2",
-      [userId, roleId]
+      `SELECT * FROM user_roles 
+       WHERE user_id = $1 AND role_name = 'admin'`,
+      [id]
     );
+
+    console.log("User Role Query:", userRoleQuery.rows); // Log the userRoleQuery result for debugging
 
     if (userRoleQuery.rows.length === 0) {
-      return res.status(403).json({ error: "Unauthorized" });
-    }
+      // User doesn't have the admin role assigned, so update the role
+      const updateUserRoleQuery = await pool.query(
+        `UPDATE user_roles 
+         SET role_id = (SELECT role_id FROM roles WHERE role_name = 'admin'), 
+             role_name = 'admin'
+         WHERE user_id = $1`,
+        [id]
+      );
 
-    next();
+      console.log("Update User Role Query:", updateUserRoleQuery); // Log the updateUserRoleQuery result for debugging
+
+      // Return a success message for role update
+      return res.json({ message: "User role updated successfully" });
+    } else {
+      // User already has the admin role assigned
+      return res.json({ message: "User already has the admin role assigned" });
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
+};
+
+const checkAdminRole = (role) => {
+  return async (req, res, next) => {
+    const { id } = req.params;
+
+    try {
+      // Check if the user has the desired role in the user_roles table
+      const userRoleQuery = await pool.query(
+        "SELECT * FROM user_roles WHERE user_id = $1 AND role_id = (SELECT role_id FROM roles WHERE role_name = $2)",
+        [id, role]
+      );
+
+      if (userRoleQuery.rows.length === 0) {
+        // User doesn't have the desired role, so continue to the next middleware
+        return next();
+      }
+
+      // User has the desired role, so return an error
+      return res.status(403).json({ error: "Unauthorized" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
+};
+const checkUserRole = (role) => {
+  return async (req, res, next) => {
+    console.log("checkUserRole middleware");
+
+    try {
+      // Get the role from the authenticated user
+      const authenticatedUser = req.user;
+      const userRole = authenticatedUser.role;
+
+      if (userRole !== role) {
+        // User doesn't have the required role, so return an error
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      // User has the required role, proceed to the next middleware or route handler
+      next();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
 };
 
 module.exports = {
-  assignAdminRole,
+  updateToAdmin,
   checkAdminRole,
   checkUserRole,
 };
