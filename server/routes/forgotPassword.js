@@ -6,7 +6,6 @@ const jwt = require("jsonwebtoken");
 const pool = require("../config/database");
 const mailer = require("../utils/mailer");
 const { AccessToken } = require("../utils/jwtTokens");
-const validateInput = require("../utils/inputValidationMiddleware");
 require("dotenv").config({ path: "./.env" });
 
 // Sending a verification code to the user to reset the password
@@ -91,7 +90,7 @@ router.post(
       .isLength({ min: 6 })
       .withMessage("Password must be at least 6 characters long"),
   ],
-  validateInput,
+
   async (req, res) => {
     const { password, password1 } = req.body;
     const { token, email } = req.params;
