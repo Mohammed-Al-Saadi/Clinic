@@ -44,9 +44,25 @@ const validateInput = (req, res, next) => {
 
   next();
 };
+const resetPasswordValidationRules = () => {
+  return [
+    check("password")
+      .notEmpty()
+      .withMessage("Password is required")
+      .isLength({ min: 8 })
+      .withMessage("Password must be at least 8 characters long")
+      .matches(/[a-z]/)
+      .withMessage("Password must contain a lowercase letter")
+      .matches(/[A-Z]/)
+      .withMessage("Password must contain an uppercase letter")
+      .matches(/\d/)
+      .withMessage("Password must contain a digit"),
+  ];
+};
 
 module.exports = {
   registerValidationRules,
   loginValidationRules,
   validateInput,
+  resetPasswordValidationRules,
 };
