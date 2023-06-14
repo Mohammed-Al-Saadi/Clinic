@@ -57,3 +57,7 @@ UPDATE user_roles
 SET role_id = (SELECT role_id FROM roles WHERE role_name = 'admin'),
     role_name = 'admin'
 WHERE user_id = 'user-id';
+
+ALTER TABLE users
+ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(),
+ADD COLUMN last_login TIMESTAMPTZ;
