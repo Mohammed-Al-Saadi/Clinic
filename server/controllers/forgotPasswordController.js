@@ -79,27 +79,31 @@ exports.checkTokenValidity = async (req, res) => {
 
 // Update password after checking the token expiration date and verification code
 exports.resetPassword = async (req, res) => {
-  const { password } = req.body;
+  const { password, confirm_pass } = req.body;
   const { token, email } = req.params;
 
   try {
     const verifyToken = jwt.verify(token, process.env.SECRET_KEY);
     if (verifyToken) {
-      bcrypt.hash(password, 10, (err, hash) => {
-        if (err) {
-          return res.status(err).json({
-            error: "Please check your password!",
-          });
-        }
+      if (password !== confirm_pass) {
+        res.json("Passwords should be match!");
+      } else {
+        bcrypt.hash(password, 10, (err, hash) => {
+          if (err) {
+            return res.status(err).json({
+              error: "Please check your password!",
+            });
+          }
 
-        // Update the password
-        pool.query("UPDATE users SET password = $1 WHERE email = $2", [
-          hash,
-          email,
-        ]);
+          // Update the password
+          pool.query("UPDATE users SET password = $1 WHERE email = $2", [
+            hash,
+            email,
+          ]);
 
-        res.json("Password has been changed!");
-      });
+          res.json("Password has been changed!");
+        });
+      }
     }
   } catch (error) {
     res.json(error);
