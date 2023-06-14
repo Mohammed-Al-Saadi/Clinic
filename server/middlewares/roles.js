@@ -1,7 +1,6 @@
 const pool = require("../config/database");
 const checkUserRole = (role) => {
   return async (req, res, next) => {
-    console.log("checkUserRole middleware");
 
     try {
       // Get the role from the authenticated user
