@@ -42,14 +42,13 @@ exports.sendVerificationCode = async (req, res) => {
 exports.verifyCodeAndSendLink = async (req, res) => {
   const { token, generateRandomString, email } = req.params;
   const { code } = req.body;
-
   try {
     const verifyToken = jwt.verify(token, process.env.SECRET_KEY);
     if (verifyToken) {
       if (code !== generateRandomString || !code) {
         return res.json("Please check your verification code!");
       } else {
-        const link = `http://localhost:3001/reset/${email}/${token}`;
+        const link = `http://localhost:3001/forgot-password/reset/${email}/${token}`;
         const subject = "Please click the link below to update your password!";
         // Send the link through email to the user for changing the password using nodemailer
         mailer(email, link, subject);
