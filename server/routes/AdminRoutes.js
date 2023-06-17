@@ -3,6 +3,10 @@ const router = express.Router();
 const adminController = require("../controllers/adminController");
 const { checkUserRole } = require("../middlewares/roles");
 const authenticateUser = require("../middlewares/authMiddleware");
+const {
+  registerValidationRules,
+  validateInput,
+} = require("../utils/validator");
 // Get all users (accessible only to admins)
 router.get(
   "/:id",
@@ -17,6 +21,22 @@ router.put(
   authenticateUser,
   checkUserRole("admin"),
   adminController.updateToAdmin
+);
+router.put(
+  "/updateUserProfile/:id",
+  authenticateUser,
+  checkUserRole("admin"),
+  registerValidationRules(),
+  validateInput,
+  adminController.updateUserProfile
+);
+router.put(
+  "/updateUserPassword/:id",
+  authenticateUser,
+  checkUserRole("admin"),
+  registerValidationRules(),
+  validateInput,
+  adminController.updateUserPassword
 );
 
 module.exports = router;
