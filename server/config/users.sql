@@ -61,3 +61,8 @@ WHERE user_id = 'user-id';
 ALTER TABLE users
 ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(),
 ADD COLUMN last_login TIMESTAMPTZ;
+
+
+ALTER TABLE users
+ADD COLUMN status VARCHAR(255);
+
