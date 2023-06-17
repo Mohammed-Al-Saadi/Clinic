@@ -19,10 +19,11 @@ exports.registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const createdAt = new Date().toISOString();
+    const status = "active"; // Set the default status to "active"
 
     await pool.query(
-      "INSERT INTO users (first_name, last_name, email, password, created_at) VALUES ($1, $2, $3, $4, $5)",
-      [first_name, last_name, email, hashedPassword, createdAt]
+      "INSERT INTO users (first_name, last_name, email, password, created_at, status) VALUES ($1, $2, $3, $4, $5, $6)",
+      [first_name, last_name, email, hashedPassword, createdAt, status]
     );
 
     // Assign the default role 'user' to the registered user
@@ -76,8 +77,8 @@ exports.loginUser = async (req, res) => {
 
     const userId = user.user_id;
     const role = user.role_name;
-
-    const accessToken = AccessToken(userId, role);
+    const status = user.status;
+    const accessToken = AccessToken(userId, role, status);
     const refreshToken = RefreshToken(userId);
 
     const fullName = `${user.first_name} ${user.last_name}`;
@@ -121,3 +122,72 @@ exports.getUserById = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+// Update user profile information
+exports.updateUserProfile = async (req, res) => {
+  const { id } = req.params;
+  const { first_name, last_name, email } = req.body;
+
+  try {
+    const result = await pool.query(
+      "UPDATE users SET first_name = $1, last_name = $2, email = $3 WHERE user_id = $4",
+      [first_name, last_name, email, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (result.rowCount === 1) {
+      res.json({ message: "User profile updated successfully" });
+    } else {
+      res.status(500).json({ error: "Failed to update user profile" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Change user password
+exports.changeUserPassword = async (req, res) => {
+  const { id } = req.params;
+  const { current_password, new_password } = req.body;
+
+  try {
+    const user = await pool.query("SELECT * FROM users WHERE user_id = $1", [
+      id,
+    ]);
+
+    if (user.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      current_password,
+      user.rows[0].password
+    );
+
+    if (!isPasswordValid) {
+      return res.status(400).json({ error: "Invalid current password" });
+    }
+
+    const hashedPassword = await bcrypt.hash(new_password, 10);
+
+    const updateResult = await pool.query(
+      "UPDATE users SET password = $1 WHERE user_id = $2",
+      [hashedPassword, id]
+    );
+
+    if (updateResult.rowCount === 1) {
+      res.json({ message: "Password changed successfully" });
+    } else {
+      res.status(500).json({ error: "Failed to change password" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Delete user account
