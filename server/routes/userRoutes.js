@@ -31,8 +31,6 @@ router.put(
   userController.changeUserPassword
 );
 
-// Delete user account
-
 router.get("/:id", authenticateUser, userController.getUserById);
 
 module.exports = router;

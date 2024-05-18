@@ -23,7 +23,7 @@ router.put(
   adminController.updateToAdmin
 );
 router.put(
-  "/updateUserProfile/:id",
+  "/:id/profile",
   authenticateUser,
   checkUserRole("admin"),
   registerValidationRules(),
@@ -31,12 +31,20 @@ router.put(
   adminController.updateUserProfile
 );
 router.put(
-  "/updateUserPassword/:id",
+  "/:id/password",
   authenticateUser,
   checkUserRole("admin"),
   registerValidationRules(),
   validateInput,
-  adminController.updateUserPassword
+  adminController.changeUserPassword
+);
+router.delete(
+  "/:id",
+  authenticateUser,
+  checkUserRole("admin"),
+  registerValidationRules(),
+  validateInput,
+  adminController.deleteUserAccount
 );
 
 module.exports = router;

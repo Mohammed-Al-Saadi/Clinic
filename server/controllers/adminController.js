@@ -91,7 +91,7 @@ exports.updateUserProfile = async (req, res) => {
   }
 };
 
-exports.updateUserPassword = async (req, res) => {
+exports.changeUserPassword = async (req, res) => {
   try {
     //check if password in database
     const { id } = req.params;
@@ -118,5 +118,28 @@ exports.updateUserPassword = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.json("Internal server error");
+  }
+};
+exports.deleteUserAccount = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      "UPDATE users SET status = $1 WHERE user_id = $2",
+      ["inactive", id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (result.rowCount === 1) {
+      res.json({ message: "User account deactivated successfully" });
+    } else {
+      res.status(500).json({ error: "Failed to deactivate user account" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
